@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>初始化</title>
+    <link href="./static/css/element.min.css" rel="stylesheet">
+    <script src="./static/model/vue.min.js"></script>
+    <script src="./static/model/element.min.js"></script>
+</head>
+<style>
+    .el-header,
+    .el-footer {
+        background-color: #B3C0D1;
+        color: #333;
+        text-align: center;
+        line-height: 60px;
+    }
+    
+    #ckoutput {
+        display: block;
+        padding: .375rem .75rem;
+        font-size: 1rem;
+        height: 400px;
+        line-height: 1.5;
+        color: #495057;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        overflow: auto;
+        resize: vertical;
+    }
+    
+    #app {
+        height: 600px;
+    }
+</style>
+
+<body>
+    <div id="app">
+        <el-container>
+            <el-header>正在初始化请稍等。。。</el-header>
+            <el-main>
+                <el-progress :text-inside="true" :stroke-width="18" :percentage="percentage" status="success"></el-progress>
+                <el-input id="ckoutput" v-model='desc' type="textarea" readonly></el-input>
+            </el-main>
+        </el-container>
+    </div>
+</body>
+
+</html>
+<script>
+    const readline = require('readline');
+    const {
+        ipcRenderer
+    } = require('electron')
+    const path = require('path')
+    const {
+        spawn,
+        exec
+    } = require('child_process')
+    var yauzl = require("yauzl");
+    var fs = require("fs");
+    var util = require("util");
+    var Transform = require("stream").Transform;
+    const os = require('os')
+    const homedir = os.homedir()
+    let arduinozip
+    if (process.platform === 'darwin') {
+        arduinozip = path.join(__dirname, '../arduino-macosx.zip')
+
+    } else if (process.platform === 'win32') {
+        arduinozip = path.join(__dirname, '../Arduino.zip')
+    }
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            desc: '',
+            percentage: 0
+        },
+        async mounted() {
+            let rm
+            let apppack = path.join(homedir, "./.hterobotapp/")
+
+            const loading = this.$loading({
+                lock: true,
+                text: 'Loading',
+                spinner: 'el-icon-loading',
+                background: 'rgba(0, 0, 0, 0.7)'
+            });
+            if (process.platform === 'darwin') {
+
+                if (fs.existsSync(path.join(apppack, "./Arduino.app"))) {
+                    rm = await this.rmdir()
+                }
+            } else if (process.platform === 'win32') {
+                if (fs.existsSync(path.join(apppack, "./Arduino"))) {
+                    rm = await this.rmdir()
+                }
+            }
+
+            let i
+            if (process.platform === 'darwin') {
+                i = await this.unzip()
+            } else if (process.platform === 'win32') {
+                i = await this.open(arduinozip)
+            }
+            loading.close(i);
+            ipcRenderer.send('closezip', 'ok')
+        },
+        methods: {
+            unzip() {
+                return new Promise((res, rej) => {
+                    const home = path.join(os.homedir(), "./.hterobotapp/")
+
+                    let pass = spawn("unzip", ["-x", arduinozip, "-d", home])
+                    console.log(`unzip -x ${arduinozip} -d ~/.hterobotapp/`)
+                    const stderr = pass.stderr
+                    const stdout = pass.stdout
+                    pass.stdout.on('data', (data) => {
+                        this.desc = data
+                    });
+
+                    pass.stderr.on('data', (data) => {
+                        this.desc = data
+                    });
+
+                    pass.on('close', (code) => {
+                        console.log(`子进程退出码：${code}`);
+                        res(true)
+                    });
+                })
+            },
+            mkdirp(dir, cb) {
+                if (dir === ".") return cb();
+                fs.stat(dir, (err) => {
+                    if (err == null) return cb(); // already exists
+                    var parent = path.dirname(dir);
+                    this.mkdirp(parent, () => {
+                        this.desc = (dir.replace(/\/$/, "") + "/\n")
+                            //process.stdout.write(dir.replace(/\/$/, "") + "/\n");
+                        fs.mkdir(dir, cb);
+                    });
+                });
+            },
+            open(zipFilePath) {
+                return new Promise((resolve, reject) => {
+                    const cwd = process.cwd()
+                    let apppack = path.join(homedir, "./.hterobotapp/")
+                    process.chdir(apppack)
+                    if (!zipFilePath) {
+                        reject("Arduino文件不存在")
+                    }
+                    yauzl.open(zipFilePath, {
+                        lazyEntries: true
+                    }, (err, zipfile) => {
+                        if (err) reject(err);
+                        var handleCount = 0;
+
+                        function incrementHandleCount() {
+                            handleCount++;
+                        }
+
+                        function decrementHandleCount() {
+                            handleCount--;
+                            if (handleCount === 0) {
+                                this.desc += "已经解压完成 \b"
+                            }
+                        }
+                        incrementHandleCount();
+                        zipfile.on("close", () => {
+                            this.desc += "已经解压完成 将要重启 \b"
+                            decrementHandleCount();
+                            process.chdir(cwd)
+                            resolve(true)
+                        });
+                        zipfile.readEntry();
+                        zipfile.on("entry", (entry) => {
+                            if (/\/$/.test(entry.fileName)) {
+                                // directory file names end with '/'
+                                this.mkdirp(entry.fileName, function() {
+                                    if (err) throw err;
+                                    zipfile.readEntry();
+                                });
+                            } else {
+                                // ensure parent directory exists
+                                this.mkdirp(path.dirname(entry.fileName), () => {
+                                    zipfile.openReadStream(entry, (err, readStream) => {
+                                        if (err) throw err;
+                                        // report progress through large files
+                                        var byteCount = 0;
+                                        var totalBytes = entry.uncompressedSize;
+                                        var progressInterval = setInterval(() => {
+                                            this.percentage = ((byteCount / totalBytes * 100) | 0)
+                                        }, 1000 / 60);
+                                        var filter = new Transform();
+                                        filter._transform = function(chunk, encoding, cb) {
+                                            byteCount += chunk.length;
+                                            cb(null, chunk);
+                                        };
+                                        filter._flush = function(cb) {
+                                            clearInterval(progressInterval);
+                                            // delete the "..."
+                                            process.stdout.write("\b \b\b \b\b \b\n");
+                                            cb();
+                                            zipfile.readEntry();
+                                        };
+                                        // pump file contents
+                                        var writeStream = fs.createWriteStream(entry.fileName);
+                                        incrementHandleCount();
+                                        writeStream.on("close", decrementHandleCount);
+                                        readStream.pipe(filter).pipe(writeStream);
+                                    });
+                                });
+                            }
+                        });
+                    })
+                })
+            },
+            rmdir() {
+                return new Promise((res, rej) => {
+                    let ps
+                    if (process.platform === 'darwin') {
+                        ps = exec(`rm -r -f ${path.join(os.homedir(), "./.hterobotapp/Arduino.app")}`)
+                    } else if (process.platform === 'win32') {
+                        ps = exec(`rmdir /q /s ${path.join(os.homedir(), "./.hterobotapp/Arduino")}`)
+                    }
+                    ps.on('close', (code) => {
+                        if (code !== 0) {
+                            console.log(`ps 进程退出码：${code}`);
+                            rej(code)
+                        } else {
+                            res(0)
+                        }
+                    });
+                    ps.stdout.on('data', (data) => {
+                        console.log(data)
+                    });
+
+                    ps.stderr.on('data', (data) => {
+                        console.log(data)
+                    });
+
+
+                })
+
+            }
+        }
+    })
+</script>

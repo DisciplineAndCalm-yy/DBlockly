@@ -1,0 +1,32 @@
+{
+    "name": "d-blockly",
+    "version": "1.0.5",
+    "description": "",
+    "main": "main.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "electron .",
+        "build:win": "electron-builder --win --ia32",
+        "build:mac": "electron-builder --mac",
+        "dev": "electron dev.js",
+        "install": "electron-rebuild"
+    },
+    "author": "Mryang <535152057@qq.com>",
+    "license": "ISC",
+    "dependencies": {
+        "electron-log": "^2.2.16",
+        "electron-sudo": "^4.0.12",
+        "electron-updater": "^3.0.3",
+        "fast-xml-parser": "^3.11.2",
+        "he": "^1.1.1",
+        "serialport": "^6.2.2",
+        "underscore": "^1.9.1",
+        "yauzl": "^2.10.0"
+    },
+    "devDependencies": {
+        "electron": "2.0.2",
+        "electron-builder": "^20.19.2",
+        "electron-rebuild": "^1.8.1",
+        "peer": "^0.2.8"
+    }
+}

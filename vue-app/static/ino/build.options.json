@@ -1,0 +1,10 @@
+{
+  "builtInLibrariesFolders": "G:\\eletron\\D-blockly\\resources\\app\\Arduino\\libraries",
+  "customBuildProperties": "build.path=G:\\eletron\\D-blockly\\resources\\app\\html\\ino\\,build.warn_data_percentage=75,runtime.tools.avr-gcc.path=G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\tools\\avr,runtime.tools.avrdude.path=G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\tools\\avr,runtime.tools.arduinoOTA.path=G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\tools\\avr",
+  "fqbn": "arduino:avr:uno",
+  "hardwareFolders": "G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware",
+  "otherLibrariesFolders": "C:\\Users\\Administrator\\Documents\\Arduino\\libraries",
+  "runtime.ide.version": "10804",
+  "sketchLocation": "G:\\eletron\\D-blockly\\resources\\app\\ino\\text.ino",
+  "toolsFolders": "G:\\eletron\\D-blockly\\resources\\app\\Arduino\\tools-builder,G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\tools\\avr"
+}

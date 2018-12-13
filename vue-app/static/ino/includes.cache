@@ -1,0 +1,17 @@
+[
+  {
+    "Sourcefile": "",
+    "Include": "",
+    "Includepath": "G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\arduino\\avr\\cores\\arduino"
+  },
+  {
+    "Sourcefile": "",
+    "Include": "",
+    "Includepath": "G:\\eletron\\D-blockly\\resources\\app\\Arduino\\hardware\\arduino\\avr\\variants\\standard"
+  },
+  {
+    "Sourcefile": "G:\\eletron\\D-blockly\\resources\\app\\html\\ino\\sketch\\text.ino.cpp",
+    "Include": "",
+    "Includepath": ""
+  }
+]

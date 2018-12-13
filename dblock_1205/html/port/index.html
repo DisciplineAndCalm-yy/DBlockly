@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>串口助手</title>
+    <link rel="stylesheet" href="../static/css/element.min.css">
+    <style>
+        .el-main {
+            height: 320px;
+        }
+
+        .el-input-group__append {
+            cursor: pointer;
+            transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+        .el-input-group__append:hover {
+            background-color: aqua;
+        }
+
+        textarea {
+            display: block;
+            width: 670px;
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+            overflow: auto;
+            resize: vertical;
+        }
+
+    </style>
+</head>
+
+<body>
+    <el-container id="app">
+        <el-header>
+            <div class="el-input el-input-group el-input-group--append">
+                <input id="input" class="el-input__inner" @keyup.13="from" type=text placeholder="请输入内容" v-model="fromto" />
+                <div class="el-input-group__append" @click="from(1213)" slot="append">发送</div>
+            </div>
+        </el-header>
+        <el-main>
+            <textarea rows="15" id="ckoutput" readonly v-text="text1"></textarea>
+        </el-main>
+        <el-footer>
+            <el-switch v-model="isGp" active-text="自动滚屏">
+            </el-switch>
+            <el-button type="success" @click="cleartext1">清屏</el-button>
+            <el-select onclick="xzck()" v-model="port" placeholder="请选择串口">
+                <el-option label="关闭串口" value="">
+                </el-option>
+                <el-option v-for="item in ports" :label="item.comName" :value="item.comName">
+                </el-option>
+            </el-select>
+            <el-tooltip content="请选择波特率" placement="top">
+                <el-select v-model="rate" placeholder="请选择波特率">
+
+                    <el-option v-for="item in baudRate" :key="item" :label="item" :value="item">
+                    </el-option>
+                </el-select>
+            </el-tooltip>
+        </el-footer>
+    </el-container>
+
+</body>
+<script src="../static/model/vue.min.js"></script>
+<script src="../static/model/element.min.js"></script>
+<script>
+    const serialport = require('serialport')
+    const {
+        ipcRenderer
+    } = require("electron");
+    let port1
+
+    function getserial(com, btl) {
+        return new serialport(com, {
+            baudRate: btl
+        })
+    }
+    
+    function xzck () {
+        serialport.list((err, ports) => {
+            vm.ports = ports
+        })
+    }
+
+    function getok(x) {
+        x.on('open', () => {
+            vm.ts('打开串口成功')
+        });
+        x.on('data', (data) => {
+            vm.text1 += data.toString()
+        });
+        x.on('error', (error) => {
+            vm.ts('error')
+        });
+    }
+    ipcRenderer.on('closeport', (event, arg) => {
+        if (port1) {
+            port1.close()
+        }
+        vm.port = ""
+    })
+    const vm = new Vue({
+        el: '#app',
+        data: {
+            untr: true,
+            isGp: true,
+            baudRate: [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200],
+            newports: '',
+            rate: 9600,
+            ports: [],
+            port: '',
+            text1: '',
+            fromto: '',
+            footerdang: 'el-icon-arrow-up',
+
+        },
+        watch: {
+            rate(v, o) {
+                if (v == '') return;
+                if (port1.isOpen) {
+                    port1.update({
+                        baudRate: v
+                    })
+                    getok(port1)
+                }
+
+            },
+            async port(v, o) {
+                if (port1) {
+                    await port1.close()
+                }
+                if (v == '') return;
+                port1 = getserial(v, this.rate)
+                getok(port1)
+            },
+            text1(v, o) {
+                const div = document.getElementById('ckoutput')
+                if (this.isGp) {
+                    div.scrollTop = div.scrollHeight;
+                }
+            }
+        },
+        mounted() {
+            serialport.list((err, ports) => {
+                this.ports = ports
+            })
+        },
+        methods: {
+            keydownebter() {
+                alert(123123)
+                this.from()
+            },
+            getok() {
+                port1.on('open', () => {
+                    vm.ts('打开串口成功')
+                });
+                port1.on('data', (data) => {
+                    this.text1 += data
+                });
+                port1.on('error', (error) => {
+                    //vm.ts('有错误请看日志')
+                    //document.getElementById("arduinoLog").innerText = error
+                });
+            },
+            cleartext1() {
+                this.text1 = ''
+            },
+            from() {
+                if (!port1) {
+                    this.ts('选择一个串口')
+                    return
+                }
+                try {
+                    port1.write(this.fromto)
+                    this.ts('发送完成')
+                } catch (err) {
+                    this.ts('发送失败')
+                }
+                this.fromto = ""
+
+            },
+            ts(text) {
+                this.$notify({
+                    title: '提示',
+                    message: text
+                });
+            }
+
+        }
+    })
+
+</script>
+
+</html>
